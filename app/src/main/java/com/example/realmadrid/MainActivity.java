@@ -1,88 +1,79 @@
 package com.example.realmadrid;
 
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.viewpager.widget.ViewPager;
-
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.View;
 
-import com.example.realmadrid.fragment.FragmentAdapter;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SearchView;
+import androidx.recyclerview.widget.LinearLayoutManager;
+
+import com.example.realmadrid.activity.AddPlayerActivity;
+import com.example.realmadrid.database.DatabaseHelper;
+import com.example.realmadrid.databinding.ActivityMainBinding;
+import com.example.realmadrid.model.Player;
+import com.example.realmadrid.model.PlayerAdapter;
+
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private BottomNavigationView bottomNavigationView;
-    private ViewPager viewPager;
-    private FragmentAdapter fragmentAdapter;
-    private ActionBar actionBar;
+    private ActivityMainBinding mainBinding;
+    private PlayerAdapter playerAdapter;
+    private List<Player> playerList;
+    private DatabaseHelper databaseHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        mainBinding = ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(mainBinding.getRoot());
 
-        actionBar = getSupportActionBar();
-        actionBar.setTitle("Home");
+        databaseHelper = new DatabaseHelper(this);
 
-        viewPager = findViewById(R.id.viewPager);
-        bottomNavigationView = findViewById(R.id.btnNavigation);
+        playerList = databaseHelper.getAll();
+        playerAdapter = new PlayerAdapter(playerList, this);
+        mainBinding.recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        mainBinding.recyclerView.setHasFixedSize(true);
+        mainBinding.recyclerView.setAdapter(playerAdapter);
 
-        fragmentAdapter = new FragmentAdapter(getSupportFragmentManager(), FragmentAdapter.BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
-        viewPager.setAdapter(fragmentAdapter);
-        bottomNavigationView.setOnNavigationItemSelectedListener(item -> {
-            switch (item.getItemId()) {
-                case R.id.menuHome:
-                    viewPager.setCurrentItem(0);
-                    actionBar.setTitle("Home");
-                    break;
-                case R.id.menuAdd:
-                    viewPager.setCurrentItem(1);
-                    actionBar.setTitle("Add player");
-                    break;
-                case R.id.menuSearch:
-                    viewPager.setCurrentItem(2);
-                    actionBar.setTitle("Search player");
-                    break;
-                case R.id.menuNotifications:
-                    viewPager.setCurrentItem(3);
-                    actionBar.setTitle("Get notifications");
-                    break;
+        mainBinding.FabAdd.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, AddPlayerActivity.class));
             }
-            return true;
         });
 
-        viewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
-            @Override
-            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+    }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater menuInflater = getMenuInflater();
+        menuInflater.inflate(R.menu.menu, menu);
+        MenuItem menuItem = menu.findItem(R.id.search);
+//
+//        getMenuInflater().inflate(R.menu.menu_search, menu);
+//        MenuItem searchItem = menu.findItem(R.id.action_search);
+//        SearchView searchView = (SearchView) searchItem.getActionView();
+//
+        SearchView searchView = (SearchView) menuItem.getActionView();
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                return false;
             }
 
             @Override
-            public void onPageSelected(int position) {
-                switch (position) {
-                    case 0:
-                        bottomNavigationView.getMenu().findItem(R.id.menuHome).setChecked(true);
-                        actionBar.setTitle("Home");
-                        break;
-                    case 1:
-                        bottomNavigationView.getMenu().findItem(R.id.menuAdd).setChecked(true);
-                        actionBar.setTitle("Add player");
-                        break;
-                    case 2:
-                        bottomNavigationView.getMenu().findItem(R.id.menuSearch).setChecked(true);
-                        actionBar.setTitle("Search player");
-                        break;
-                    case 3:
-                        bottomNavigationView.getMenu().findItem(R.id.menuNotifications).setChecked(true);
-                        actionBar.setTitle("Get notifications");
-                        break;
-                }
-            }
-
-            @Override
-            public void onPageScrollStateChanged(int state) {
-
+            public boolean onQueryTextChange(String newText) {
+                List<Player> list = databaseHelper.getPlayerByName(newText);
+                playerAdapter.setPlayer(list);
+                mainBinding.recyclerView.setAdapter(playerAdapter);
+                return true;
             }
         });
+        return super.onCreateOptionsMenu(menu);
     }
 }
